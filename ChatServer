@@ -1,0 +1,58 @@
+import network.TCPConnection;
+import network.TCPConnectionListener;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.util.ArrayList;
+
+public class ChatServer implements TCPConnectionListener {
+
+    public static void main(String[] args) {
+         new ChatServer();
+    }
+
+    private final ArrayList<TCPConnection> connections = new ArrayList<>();
+
+    private ChatServer() {
+        System.out.println("Server running...");
+        try(ServerSocket serverSocket = new ServerSocket(1707)) {
+            while(true) {
+                try {
+                    new TCPConnection(this, serverSocket.accept());
+                }catch (IOException e) {
+                    System.out.println("TCPConection exception: " + e);
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public synchronized void onConnectionReady(TCPConnection tcpConnection) {
+        connections.add(tcpConnection);
+        sendAllconnections("Client connected " + tcpConnection);
+    }
+
+    @Override
+    public synchronized void onReceiveString(TCPConnection tcpConnection, String value) {
+        sendAllconnections(value);
+    }
+
+    @Override
+    public synchronized void onDisconnect(TCPConnection tcpConnection) {
+        connections.remove(tcpConnection);
+        sendAllconnections("Client disconnected " + tcpConnection);
+    }
+
+    @Override
+    public synchronized void onException(TCPConnection tcpConnection, Exception e) {
+        System.out.println("TCPConnection: " + e);
+    }
+
+    private void sendAllconnections(String value) {
+        System.out.println(value);
+        final int cnt = connections.size();
+        for (int i = 0; i < cnt; i++) connections.get(i).sendString(value);
+    }
+}
